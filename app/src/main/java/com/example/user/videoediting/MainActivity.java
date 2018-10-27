@@ -135,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
     }
-
+    // Select audio from device
     private void selectAudio() {
         Intent intent;
         intent = new Intent();
@@ -143,7 +143,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         intent.setType("audio/mpeg");
         startActivityForResult(Intent.createChooser(intent,"Select Audio"), SELECT_AUDIOS);
     }
-
+    // merging videos....
     private void executeMerging() {
         if(fFmpeg!=null){
             try {
@@ -366,6 +366,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public static boolean isGooglePhotosUri(Uri uri) {
         return "com.google.android.apps.photos.content".equals(uri.getAuthority());
     }
+    //Select videos from device
     private void selectVideos() {
         if (Build.VERSION.SDK_INT <19){
             Intent intent = new Intent();
