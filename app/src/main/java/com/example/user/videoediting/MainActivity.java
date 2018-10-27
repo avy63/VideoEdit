@@ -32,6 +32,7 @@ import com.github.hiteshsondhi88.libffmpeg.exceptions.FFmpegCommandAlreadyRunnin
 import com.github.hiteshsondhi88.libffmpeg.exceptions.FFmpegNotSupportedException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
@@ -40,8 +41,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     TextView txtViewShowlist;
     Button btnVideoselect,btnAudioselect,btnSave;
     private static final int SELECT_VIDEOS = 1;
+    private static final int SELECT_AUDIOS = 2;
     private static final int SELECT_VIDEOS_KITKAT = 1;
     private List<String> selectedVideos;
+    private String selectAudio;
     private String rootPath;
     private String tempPath;
     private ProgressBar loading_progress_xml;
@@ -51,8 +54,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
-            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},100);
+            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE+Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE},100);
                 return;
             }
         }
@@ -65,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             viewInitialize();
         }else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},100);
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE},100);
             }
         }
     }
@@ -79,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnVideoselect.setOnClickListener(this);
         btnAudioselect.setOnClickListener(this);
         btnSave.setOnClickListener(this);
+        selectedVideos=new ArrayList<String>();
     }
     public void isFFmpegAvailavle(){
         if (fFmpeg==null){
@@ -123,6 +127,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 selectVideos();
                 break;
             case R.id.btnAudioselect:
+                selectAudio();
                 break;
             case R.id.btnSave:
                 executeMerging();
@@ -131,14 +136,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private void selectAudio() {
+        Intent intent;
+        intent = new Intent();
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        intent.setType("audio/mpeg");
+        startActivityForResult(Intent.createChooser(intent,"Select Audio"), SELECT_AUDIOS);
+    }
+
     private void executeMerging() {
         if(fFmpeg!=null){
             try {
-                Log.e("Data",selectedVideos.get(0).toString());
-                Log.e("Data",selectedVideos.get(1).toString());
+                Log.e("Location",getApplicationContext().getFilesDir().toString());
                 String[] complexCommand = new String[]{"-y", "-i", selectedVideos.get(0).toString(), "-i", selectedVideos.get(1).toString(), "-strict", "experimental", "-filter_complex",
-                        "[0:v]scale=480x640,setsar=1:1[v0];[1:v]scale=480x640,setsar=1:1[v1];[v0][0:a][v1][1:a] concat=n=2:v=1:a=1",
-                        "-ab", "48000", "-ac", "2", "-ar", "22050", "-s", "480x640", "-vcodec", "libx264", "-crf", "27", "-q", "4", "-preset", "ultrafast", rootPath + "/output1.mp4"};
+                        "[0:v]scale=640x640,setsar=1:1[v0];[1:v]scale=640x640,setsar=1:1[v1];[v0][0:a][v1][1:a] concat=n=2:v=1:a=1",
+                        "-ab", "48000", "-ac", "2", "-ar", "22050", "-s", "640x640", "-vcodec", "libx264", "-crf", "27", "-q", "4", "-preset", "ultrafast", rootPath + "output3.mp4"};
+
+                //  String tempo=",\"&&\",\"-y\", \"-i\",rootPath + \"output3.mp4\",\"-i\",selectAudio,\"-c:v copy -c:a aac -strict experimental -map 0:v:0 -map 1:a:0\",rootPath + \"musk.mp4\""
+
                 fFmpeg.execute(complexCommand, new ExecuteBinaryResponseHandler() {
 
                     @Override
@@ -174,7 +189,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-        if (resultCode == RESULT_OK) {
+
+        if (resultCode == RESULT_OK &&requestCode==SELECT_VIDEOS) {
             selectedVideos = getSelectedVideos(requestCode, data);
             Log.d("path",selectedVideos.toString());
             txtViewShowlist.setText(selectedVideos.toString());
@@ -190,12 +206,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             rootPath=tempPath.substring(0,len+1);
             Log.d("rootPath",rootPath);
             showToastmessage(getApplicationContext(),"Rpptpath is:"+rootPath);
-            if(selectedVideos.size() > 1) {
 
+        }if (requestCode == SELECT_AUDIOS && resultCode == RESULT_OK){
+            Log.d("path",selectedVideos.toString());
+            if ((data != null) && (data.getData() != null)){
+                Uri audioFileUri = data.getData();
+                String selectedPath = "";
+                selectedPath = getPath(getApplicationContext(),audioFileUri);
+                selectAudio=selectedPath;
+                Log.d("path",selectedVideos.toString());
+                txtViewShowlist.setText(selectedVideos.toString()+" , "+selectAudio);
+                // Now you can use that Uri to get the file path, or upload it, ...
             }
         }
 
     }
+
+
 
     private List<String> getSelectedVideos(int requestCode, Intent data) {
         List<String> result = new ArrayList<>();
